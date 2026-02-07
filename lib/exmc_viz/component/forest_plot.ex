@@ -20,7 +20,7 @@ defmodule ExmcViz.Component.ForestPlot do
 
   @default_width 600
   @default_height 400
-  @pad %{left: 100, right: 20, top: 30, bottom: 30}
+  @pad %{left: 180, right: 40, top: 50, bottom: 50}
 
   @impl Scenic.Component
   def validate(data) when is_list(data), do: {:ok, data}
@@ -59,12 +59,12 @@ defmodule ExmcViz.Component.ForestPlot do
     x_ticks = Scale.ticks(x_min, x_max, 5)
 
     graph =
-      Graph.build(font_size: 10)
+      Graph.build(font_size: 24)
       |> rect({w, h}, fill: Colors.panel_bg())
       |> text("Forest Plot",
         fill: Colors.text(),
-        font_size: 14,
-        translate: {plot_left, 18}
+        font_size: 32,
+        translate: {plot_left, 36}
       )
       |> Axis.x_axis(x_scale, x_ticks,
         y: plot_bottom,
@@ -90,20 +90,20 @@ defmodule ExmcViz.Component.ForestPlot do
       # Variable name label
       |> text(fd.name,
         fill: Colors.text(),
-        font_size: 11,
+        font_size: 26,
         text_align: :right,
-        translate: {plot_left - 8, y + 4}
+        translate: {plot_left - 16, y + 8}
       )
       # 94% HDI thin line
       |> line({{x_scale.(lo94), y}, {x_scale.(hi94), y}},
-        stroke: {1.5, Colors.forest_thin()}
+        stroke: {4, Colors.forest_thin()}
       )
       # 50% HDI thick line
       |> line({{x_scale.(lo50), y}, {x_scale.(hi50), y}},
-        stroke: {4, Colors.forest_thick()}
+        stroke: {10, Colors.forest_thick()}
       )
       # Mean dot
-      |> circle(4,
+      |> circle(7,
         fill: Colors.forest_dot(),
         translate: {x_scale.(fd.mean), y}
       )
@@ -113,7 +113,7 @@ defmodule ExmcViz.Component.ForestPlot do
   defp draw_zero_line(graph, x_scale, plot_top, plot_bottom) do
     zero_px = x_scale.(0.0)
     line(graph, {{zero_px, plot_top}, {zero_px, plot_bottom}},
-      stroke: {1, Colors.axis()}
+      stroke: {3, Colors.axis()}
     )
   end
 end

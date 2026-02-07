@@ -17,7 +17,7 @@ defmodule ExmcViz.Component.ScatterPlot do
   alias ExmcViz.Draw.{Scale, Colors}
 
   @default_size 200
-  @pad %{left: 5, right: 5, top: 5, bottom: 5}
+  @pad %{left: 10, right: 10, top: 10, bottom: 10}
   @max_points 500
 
   @impl Scenic.Component
@@ -58,7 +58,7 @@ defmodule ExmcViz.Component.ScatterPlot do
     div_set = if div_indices, do: MapSet.new(div_indices), else: MapSet.new()
 
     graph =
-      Graph.build(font_size: 10)
+      Graph.build(font_size: 24)
       |> rect({size, size}, fill: Colors.panel_bg())
 
     # Draw points
@@ -68,7 +68,7 @@ defmodule ExmcViz.Component.ScatterPlot do
       py = y_scale.(y)
       color = if MapSet.member?(div_set, idx), do: Colors.divergence(), else: Colors.default_line()
 
-      circle(g, 1.5,
+      circle(g, 3,
         fill: color,
         translate: {px, py}
       )

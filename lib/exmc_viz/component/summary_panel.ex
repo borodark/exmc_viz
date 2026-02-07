@@ -11,7 +11,7 @@ defmodule ExmcViz.Component.SummaryPanel do
 
   @default_width 200
   @default_height 180
-  @line_height 16
+  @line_height 28
 
   @impl Scenic.Component
   def validate(%ExmcViz.Data.VarData{} = data), do: {:ok, data}
@@ -52,30 +52,30 @@ defmodule ExmcViz.Component.SummaryPanel do
       end
 
     graph =
-      Graph.build(font_size: 11)
+      Graph.build(font_size: 24)
       |> rect({w, h}, fill: Colors.panel_bg())
       |> text(var_data.name,
         fill: Colors.text(),
-        font_size: 12,
-        translate: {10, 16}
+        font_size: 28,
+        translate: {20, 28}
       )
 
     lines
     |> Enum.with_index()
     |> Enum.reduce(graph, fn {{label, value}, idx}, g ->
-      y = 34 + idx * @line_height
+      y = 56 + idx * @line_height
 
       g
       |> text(label,
         fill: Colors.text_dim(),
-        font_size: 11,
-        translate: {10, y}
+        font_size: 24,
+        translate: {20, y}
       )
       |> text(value,
         fill: Colors.text(),
-        font_size: 11,
+        font_size: 24,
         text_align: :right,
-        translate: {w - 10, y}
+        translate: {w - 20, y}
       )
     end)
   end

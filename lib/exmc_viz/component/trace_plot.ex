@@ -13,7 +13,7 @@ defmodule ExmcViz.Component.TracePlot do
 
   @default_width 350
   @default_height 180
-  @pad %{left: 45, right: 10, top: 25, bottom: 25}
+  @pad %{left: 90, right: 20, top: 40, bottom: 40}
 
   @impl Scenic.Component
   def validate(%ExmcViz.Data.VarData{} = data), do: {:ok, data}
@@ -50,12 +50,12 @@ defmodule ExmcViz.Component.TracePlot do
     x_ticks = Scale.ticks(0, var_data.n_samples - 1, 4)
     y_ticks = Scale.ticks(y_min, y_max, 4)
 
-    Graph.build(font_size: 10)
+    Graph.build(font_size: 24)
     |> rect({w, h}, fill: Colors.panel_bg())
     |> text(var_data.name,
       fill: Colors.text(),
-      font_size: 12,
-      translate: {plot_left, 14}
+      font_size: 28,
+      translate: {plot_left, 28}
     )
     |> Axis.x_axis(x_scale, x_ticks,
       y: plot_bottom,
@@ -101,7 +101,7 @@ defmodule ExmcViz.Component.TracePlot do
         end
       end)
 
-    path(graph, commands, stroke: {1, color})
+    path(graph, commands, stroke: {3, color})
   end
 
   defp draw_divergences(graph, %{divergent_indices: nil}, _x_scale, _y_scale), do: graph
@@ -115,7 +115,7 @@ defmodule ExmcViz.Component.TracePlot do
         px = x_scale.(idx)
         py = y_scale.(val)
 
-        circle(g, 3,
+        circle(g, 6,
           fill: Colors.divergence(),
           translate: {px, py}
         )

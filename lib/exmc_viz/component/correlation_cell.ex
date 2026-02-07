@@ -38,7 +38,7 @@ defmodule ExmcViz.Component.CorrelationCell do
 
   defp build_graph(%{r: r}, size) do
     abs_r = abs(r)
-    font_size = round(12 + abs_r * 20)
+    font_size = round(24 + abs_r * 36)
 
     color =
       cond do
@@ -49,7 +49,7 @@ defmodule ExmcViz.Component.CorrelationCell do
 
     label = :erlang.float_to_binary(r, decimals: 2)
 
-    Graph.build(font_size: 10)
+    Graph.build(font_size: 24)
     |> rect({size, size}, fill: Colors.panel_bg())
     |> text(label,
       fill: color,

@@ -13,7 +13,7 @@ defmodule ExmcViz.Component.AcfPlot do
 
   @default_width 220
   @default_height 180
-  @pad %{left: 45, right: 10, top: 25, bottom: 25}
+  @pad %{left: 90, right: 20, top: 40, bottom: 40}
 
   @impl Scenic.Component
   def validate(%ExmcViz.Data.VarData{} = data), do: {:ok, data}
@@ -58,12 +58,12 @@ defmodule ExmcViz.Component.AcfPlot do
     sig_lower_y = y_scale.(-sig)
 
     graph =
-      Graph.build(font_size: 10)
+      Graph.build(font_size: 24)
       |> rect({w, h}, fill: Colors.panel_bg())
       |> text("ACF",
         fill: Colors.text(),
-        font_size: 12,
-        translate: {plot_left, 14}
+        font_size: 28,
+        translate: {plot_left, 28}
       )
       |> Axis.x_axis(x_scale, x_ticks,
         y: plot_bottom,
@@ -77,14 +77,14 @@ defmodule ExmcViz.Component.AcfPlot do
       )
       # Zero line
       |> line({{plot_left, zero_y}, {plot_right, zero_y}},
-        stroke: {1, Colors.axis()}
+        stroke: {3, Colors.axis()}
       )
       # Significance bands
       |> line({{plot_left, sig_upper_y}, {plot_right, sig_upper_y}},
-        stroke: {1, Colors.sig_band()}
+        stroke: {3, Colors.sig_band()}
       )
       |> line({{plot_left, sig_lower_y}, {plot_right, sig_lower_y}},
-        stroke: {1, Colors.sig_band()}
+        stroke: {3, Colors.sig_band()}
       )
 
     # Draw ACF bars
@@ -95,7 +95,7 @@ defmodule ExmcViz.Component.AcfPlot do
       y_val = y_scale.(acf_val)
 
       line(g, {{x, zero_y}, {x, y_val}},
-        stroke: {2, Colors.acf_bar()}
+        stroke: {5, Colors.acf_bar()}
       )
     end)
   end

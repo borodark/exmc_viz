@@ -23,8 +23,8 @@ defmodule ExmcViz.Scene.PairPlot do
     CorrelationCell
   }
 
-  @pad 40
-  @cell_gap 4
+  @pad 60
+  @cell_gap 8
 
   @impl Scenic.Scene
   def init(scene, pair_data, _opts) do
@@ -44,12 +44,12 @@ defmodule ExmcViz.Scene.PairPlot do
     cell_size = round((usable - (k - 1) * @cell_gap) / k)
 
     graph =
-      Graph.build(font: :roboto, font_size: 12)
+      Graph.build(font: :roboto, font_size: 24)
       |> rect({vw, vh}, fill: Colors.bg())
       |> text("Pair Plot",
         fill: Colors.text(),
-        font_size: 18,
-        translate: {10, 26}
+        font_size: 32,
+        translate: {20, 42}
       )
 
     names = pair_data.var_names

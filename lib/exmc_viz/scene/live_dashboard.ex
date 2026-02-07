@@ -1,22 +1,18 @@
 defmodule ExmcViz.Scene.LiveDashboard do
   @moduledoc """
-  Live-updating dashboard scene for streaming MCMC samples.
+  Live-updating dashboard scene for streaming MCMC samples — portrait layout.
 
   On init, starts a `StreamCoordinator` GenServer and a background
   `Task` running `Exmc.NUTS.Sampler.sample_stream/4`. As samples arrive,
   the coordinator batches them and sends `{:update_data, ...}` messages
-  to this scene, which rebuilds the full graph (trace, histogram, ACF,
-  summary) from the accumulated samples.
+  to this scene, which rebuilds the full graph from the accumulated samples.
 
-  The title bar shows progress: `"MCMC Live Sampling (N / total)"` during
-  sampling, then `"(complete)"` when done.
+  Portrait layout per variable:
+  1. Trace plot (full width)
+  2. Histogram (left 55%) + ACF (right 45%)
+  3. Summary panel (full width)
 
-  ## Lifecycle
-
-  1. Scene `init` starts coordinator + sampler task
-  2. Shows "warming up..." placeholder with variable names
-  3. After 5+ samples arrive, rebuilds full dashboard on each flush
-  4. On `:sampling_complete`, marks title as complete
+  Title bar shows progress: `"MCMC Live Sampling (N / total)"`.
   """
   use Scenic.Scene
 
@@ -33,10 +29,12 @@ defmodule ExmcViz.Scene.LiveDashboard do
     SummaryPanel
   }
 
-  @row_height 200
-  @title_height 40
-  @col_gap 8
-  @row_gap 8
+  @title_height 60
+  @trace_h 300
+  @hist_acf_h 250
+  @summary_h 100
+  @gap 8
+  @var_section_h @trace_h + @hist_acf_h + @summary_h + @gap * 2
   @min_samples_for_display 5
 
   @impl Scenic.Scene
@@ -77,7 +75,6 @@ defmodule ExmcViz.Scene.LiveDashboard do
 
   @impl GenServer
   def handle_info({:update_data, all_samples, _all_stats, count, total}, scene) do
-    # Only rebuild if we have enough samples
     if count >= @min_samples_for_display do
       graph = build_live_graph(scene, all_samples, count, total)
 
@@ -101,96 +98,92 @@ defmodule ExmcViz.Scene.LiveDashboard do
     {vw, vh} = scene.viewport.size
 
     graph =
-      Graph.build(font: :roboto, font_size: 12)
+      Graph.build(font: :roboto, font_size: 14)
       |> rect({vw, vh}, fill: Colors.bg())
       |> text("MCMC Live Sampling — warming up...",
         fill: Colors.text(),
-        font_size: 18,
-        translate: {@col_gap, 26}
+        font_size: 24,
+        translate: {@gap, 36}
       )
 
-    # Show variable name placeholders
     var_names
     |> Enum.with_index()
     |> Enum.reduce(graph, fn {name, i}, g ->
-      y = @title_height + i * 30 + 20
+      y = @title_height + i * 40 + 20
 
       text(g, name,
         fill: Colors.text_dim(),
-        font_size: 14,
-        translate: {@col_gap + 10, y}
+        font_size: 18,
+        translate: {@gap + 10, y}
       )
     end)
   end
 
   defp build_live_graph(scene, all_samples, count, total) do
-    {vw, _vh} = scene.viewport.size
+    {vw, vh} = scene.viewport.size
 
-    # Build var_data from accumulated samples
     trace =
       Map.new(all_samples, fn {name, values} ->
         {name, Nx.tensor(values)}
       end)
 
     var_data_list = Prepare.from_trace(trace)
-
-    # Column widths
-    usable_w = vw - @col_gap * 5
-    trace_w = round(usable_w * 0.33)
-    hist_w = round(usable_w * 0.26)
-    acf_w = round(usable_w * 0.21)
-    summary_w = round(usable_w * 0.20)
-
-    plot_h = @row_height - @row_gap
+    usable_w = vw - @gap * 2
 
     status = if scene.assigns.complete, do: "complete", else: "#{count} / #{total}"
     title = "MCMC Live Sampling (#{status})"
 
     graph =
-      Graph.build(font: :roboto, font_size: 12)
-      |> rect({vw, @title_height + length(var_data_list) * @row_height + 20},
-        fill: Colors.bg()
-      )
+      Graph.build(font: :roboto, font_size: 14)
+      |> rect({vw, vh}, fill: Colors.bg())
       |> text(title,
         fill: Colors.text(),
-        font_size: 18,
-        translate: {@col_gap, 26}
+        font_size: 24,
+        translate: {@gap, 36}
       )
 
     var_data_list
     |> Enum.with_index()
-    |> Enum.reduce(graph, fn {vd, row}, g ->
-      y = @title_height + row * @row_height
+    |> Enum.reduce(graph, fn {vd, i}, g ->
+      y_base = @title_height + i * @var_section_h
 
-      col1_x = @col_gap
-      col2_x = col1_x + trace_w + @col_gap
-      col3_x = col2_x + hist_w + @col_gap
-      col4_x = col3_x + acf_w + @col_gap
+      # Row 1: Trace plot — full width
+      g =
+        TracePlot.add_to_graph(g, vd,
+          id: :"trace_#{vd.name}",
+          width: usable_w,
+          height: @trace_h,
+          translate: {@gap, y_base}
+        )
 
-      g
-      |> TracePlot.add_to_graph(vd,
-        id: :"trace_#{vd.name}",
-        width: trace_w,
-        height: plot_h,
-        translate: {col1_x, y}
-      )
-      |> Histogram.add_to_graph(vd,
-        id: :"hist_#{vd.name}",
-        width: hist_w,
-        height: plot_h,
-        translate: {col2_x, y}
-      )
-      |> AcfPlot.add_to_graph(vd,
-        id: :"acf_#{vd.name}",
-        width: acf_w,
-        height: plot_h,
-        translate: {col3_x, y}
-      )
-      |> SummaryPanel.add_to_graph(vd,
+      # Row 2: Histogram (left 55%) + ACF (right 45%)
+      y_hist = y_base + @trace_h + @gap
+      hist_w = round(usable_w * 0.55)
+      acf_w = usable_w - hist_w - @gap
+
+      g =
+        g
+        |> Histogram.add_to_graph(vd,
+          id: :"hist_#{vd.name}",
+          width: hist_w,
+          height: @hist_acf_h,
+          translate: {@gap, y_hist}
+        )
+        |> AcfPlot.add_to_graph(vd,
+          id: :"acf_#{vd.name}",
+          width: acf_w,
+          height: @hist_acf_h,
+          translate: {@gap + hist_w + @gap, y_hist}
+        )
+
+      # Row 3: Summary — full width
+      y_summary = y_hist + @hist_acf_h + @gap
+
+      SummaryPanel.add_to_graph(g, vd,
         id: :"summary_#{vd.name}",
-        width: summary_w,
-        height: plot_h,
-        translate: {col4_x, y}
+        width: usable_w,
+        height: @summary_h,
+        translate: {@gap, y_summary}
       )
     end)
   end

@@ -9,8 +9,8 @@ defmodule ExmcViz.Draw.Axis do
 
   alias ExmcViz.Draw.Colors
 
-  @tick_size 4
-  @label_font_size 10
+  @tick_size 8
+  @label_font_size 20
 
   @doc """
   Draw an X-axis at the bottom of the plot area.
@@ -27,14 +27,14 @@ defmodule ExmcViz.Draw.Axis do
 
     # Axis line
     graph =
-      line(graph, {{x_start, y}, {x_end, y}}, stroke: {1, Colors.axis()})
+      line(graph, {{x_start, y}, {x_end, y}}, stroke: {2, Colors.axis()})
 
     # Ticks and labels
     Enum.reduce(ticks, graph, fn {value, label}, g ->
       x = scale_fn.(value)
 
       g
-      |> line({{x, y}, {x, y + @tick_size}}, stroke: {1, Colors.axis()})
+      |> line({{x, y}, {x, y + @tick_size}}, stroke: {2, Colors.axis()})
       |> text(label,
         fill: Colors.text_dim(),
         font_size: @label_font_size,
@@ -59,14 +59,14 @@ defmodule ExmcViz.Draw.Axis do
 
     # Axis line
     graph =
-      line(graph, {{x, y_start}, {x, y_end}}, stroke: {1, Colors.axis()})
+      line(graph, {{x, y_start}, {x, y_end}}, stroke: {2, Colors.axis()})
 
     # Ticks and labels
     Enum.reduce(ticks, graph, fn {value, label}, g ->
       y = scale_fn.(value)
 
       g
-      |> line({{x - @tick_size, y}, {x, y}}, stroke: {1, Colors.axis()})
+      |> line({{x - @tick_size, y}, {x, y}}, stroke: {2, Colors.axis()})
       |> text(label,
         fill: Colors.text_dim(),
         font_size: @label_font_size,

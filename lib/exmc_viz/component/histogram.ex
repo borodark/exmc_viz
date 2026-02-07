@@ -11,7 +11,7 @@ defmodule ExmcViz.Component.Histogram do
 
   @default_width 280
   @default_height 180
-  @pad %{left: 45, right: 10, top: 25, bottom: 25}
+  @pad %{left: 90, right: 20, top: 40, bottom: 40}
 
   @impl Scenic.Component
   def validate(%ExmcViz.Data.VarData{} = data), do: {:ok, data}
@@ -49,12 +49,12 @@ defmodule ExmcViz.Component.Histogram do
     y_ticks = Scale.ticks(0, max_count, 3)
 
     graph =
-      Graph.build(font_size: 10)
+      Graph.build(font_size: 24)
       |> rect({w, h}, fill: Colors.panel_bg())
       |> text("Posterior",
         fill: Colors.text(),
-        font_size: 12,
-        translate: {plot_left, 14}
+        font_size: 28,
+        translate: {plot_left, 28}
       )
       |> Axis.x_axis(x_scale, x_ticks,
         y: plot_bottom,
