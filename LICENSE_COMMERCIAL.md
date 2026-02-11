@@ -4,6 +4,10 @@ ExmcViz Commercial License
 Copyright (c) 2026 Igor Ostaptchenko, Octanix Americas LLC.
 All rights reserved.
 
+This is one of two available licenses. You may choose either:
+- Commercial License (this file)
+- Community License (see LICENSE_COMMUNITY.md)
+
 This Commercial License governs use of ExmcViz and any Enterprise modules
 explicitly designated by the Licensor. By installing, copying, or using the
 Software, you agree to these terms.

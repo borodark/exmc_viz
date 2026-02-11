@@ -4,6 +4,10 @@ ExmcViz Community License
 Copyright (c) 2026 Igor Ostaptchenko, Octanix Americas LLC.
 All rights reserved.
 
+This is one of two available licenses. You may choose either:
+- Community License (this file)
+- Commercial License (see LICENSE_COMMERCIAL.md)
+
 This project is dual-licensed. You may use this code under either:
 1) The Community License (this file), or
 2) A Commercial License (available separately).
