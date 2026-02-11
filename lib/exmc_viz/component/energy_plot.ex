@@ -84,7 +84,8 @@ defmodule ExmcViz.Component.EnergyPlot do
       )
 
     # Draw energy histogram (amber, behind)
-    graph = draw_bars(graph, he.bins, x_scale, y_scale, plot_bottom, Colors.energy_marginal(), 0.7)
+    graph =
+      draw_bars(graph, he.bins, x_scale, y_scale, plot_bottom, Colors.energy_marginal(), 0.7)
 
     # Draw transition histogram (blue, in front)
     draw_bars(graph, ht.bins, x_scale, y_scale, plot_bottom, Colors.energy_transition(), 0.7)

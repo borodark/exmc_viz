@@ -94,9 +94,7 @@ defmodule ExmcViz.Component.AcfPlot do
       x = x_scale.(lag)
       y_val = y_scale.(acf_val)
 
-      line(g, {{x, zero_y}, {x, y_val}},
-        stroke: {5, Colors.acf_bar()}
-      )
+      line(g, {{x, zero_y}, {x, y_val}}, stroke: {5, Colors.acf_bar()})
     end)
   end
 end

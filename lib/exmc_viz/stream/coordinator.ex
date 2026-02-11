@@ -51,7 +51,8 @@ defmodule ExmcViz.Stream.Coordinator do
       # Send update to dashboard
       send(state.dashboard_pid, {:update_data, all_samples, all_stats, count, state.num_samples})
 
-      {:noreply, %{state | buffer: [], all_samples: all_samples, all_stats: all_stats, count: count}}
+      {:noreply,
+       %{state | buffer: [], all_samples: all_samples, all_stats: all_stats, count: count}}
     else
       {:noreply, %{state | buffer: buffer, count: count}}
     end
@@ -62,7 +63,11 @@ defmodule ExmcViz.Stream.Coordinator do
     # Final flush if any remaining
     if state.buffer != [] do
       {all_samples, all_stats} = flush_buffer(state.buffer, state.all_samples, state.all_stats)
-      send(state.dashboard_pid, {:update_data, all_samples, all_stats, state.count, state.num_samples})
+
+      send(
+        state.dashboard_pid,
+        {:update_data, all_samples, all_stats, state.count, state.num_samples}
+      )
     end
 
     send(state.dashboard_pid, :sampling_complete)

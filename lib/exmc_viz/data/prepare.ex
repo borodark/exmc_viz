@@ -220,7 +220,10 @@ defmodule ExmcViz.Data.Prepare do
       sorted_arr = :array.from_list(sorted)
 
       {lo, hi, _width} =
-        Enum.reduce(0..(n - interval_size - 1), {0, interval_size - 1, :infinity}, fn i, {best_lo, best_hi, best_w} ->
+        Enum.reduce(0..(n - interval_size - 1), {0, interval_size - 1, :infinity}, fn i,
+                                                                                      {best_lo,
+                                                                                       best_hi,
+                                                                                       best_w} ->
           lo_val = :array.get(i, sorted_arr)
           hi_val = :array.get(i + interval_size - 1, sorted_arr)
           w = hi_val - lo_val
@@ -356,4 +359,125 @@ defmodule ExmcViz.Data.Prepare do
   end
 
   def extract_divergent_indices(_), do: nil
+
+  @doc """
+  Compute rank histograms for multi-chain diagnostics.
+
+  Takes a list of traces (one per chain) and returns a list of `%RankData{}`
+  structs, one per variable. Each contains per-chain rank histograms.
+  Uniform rank distributions indicate good mixing.
+  """
+  def prepare_ranks(traces, num_bins \\ 20) when is_list(traces) and length(traces) > 0 do
+    var_names = traces |> hd() |> Map.keys() |> Enum.sort()
+
+    Enum.map(var_names, fn name ->
+      # Pool all chains, compute ranks
+      all_samples =
+        Enum.flat_map(traces, fn trace ->
+          Nx.to_flat_list(trace[name])
+        end)
+
+      n_total = length(all_samples)
+
+      # Rank: position in sorted pooled samples
+      indexed = Enum.with_index(all_samples)
+      sorted = Enum.sort_by(indexed, &elem(&1, 0))
+
+      ranks =
+        Enum.reduce(Enum.with_index(sorted), %{}, fn {{_val, orig_idx}, rank}, acc ->
+          Map.put(acc, orig_idx, rank)
+        end)
+
+      # Split ranks back by chain
+      chain_sizes =
+        Enum.map(traces, fn trace -> elem(Nx.shape(trace[name]), 0) end)
+
+      {chain_ranks, _} =
+        Enum.map_reduce(chain_sizes, 0, fn size, offset ->
+          r = Enum.map(offset..(offset + size - 1), fn i -> Map.fetch!(ranks, i) end)
+          {r, offset + size}
+        end)
+
+      # Histogram each chain's ranks
+      bin_edges = Enum.map(0..num_bins, fn i -> i * n_total / num_bins end)
+
+      rank_histograms =
+        Enum.map(chain_ranks, fn chain_r ->
+          Enum.map(0..(num_bins - 1), fn bin ->
+            lo = Enum.at(bin_edges, bin)
+            hi = Enum.at(bin_edges, bin + 1)
+            Enum.count(chain_r, fn r -> r >= lo and r < hi end)
+          end)
+        end)
+
+      %ExmcViz.Data.RankData{
+        name: name,
+        rank_histograms: rank_histograms,
+        num_chains: length(traces),
+        num_bins: num_bins
+      }
+    end)
+  end
+
+  @doc """
+  Prepare posterior predictive check data.
+
+  Takes observed data and predictive samples, returns a list of `%PPCData{}`
+  structs with shared bin edges for overlay comparison.
+
+  - `observed_data`: `%{obs_name => Nx.tensor or [float]}`
+  - `predictive_trace`: `%{obs_name => Nx.tensor({n_samples, ...})}`
+  """
+  def prepare_ppc(observed_data, predictive_trace, num_bins \\ 30) do
+    Enum.map(observed_data, fn {obs_name, obs_values} ->
+      obs_list = if is_list(obs_values), do: obs_values, else: Nx.to_flat_list(obs_values)
+      pred_samples = Map.fetch!(predictive_trace, obs_name)
+      n_samples = elem(Nx.shape(pred_samples), 0)
+
+      # Compute shared bin edges from combined data range
+      pred_flat = Nx.to_flat_list(pred_samples)
+      all_values = obs_list ++ pred_flat
+      {lo, hi} = {Enum.min(all_values), Enum.max(all_values)}
+      span = if hi == lo, do: 1.0, else: hi - lo
+      lo = lo - 0.05 * span
+      hi = hi + 0.05 * span
+      bin_width = (hi - lo) / num_bins
+      bin_edges = Enum.map(0..num_bins, fn i -> lo + i * bin_width end)
+
+      # Histogram observed
+      obs_hist = histogram_with_edges(obs_list, bin_edges, num_bins)
+
+      # Histogram each predictive sample
+      obs_size = length(obs_list)
+
+      pred_hists =
+        Enum.map(0..(n_samples - 1), fn i ->
+          pred_row = Nx.to_flat_list(pred_samples[i])
+          # Take only obs_size elements per sample row
+          pred_row = Enum.take(pred_row, obs_size)
+          histogram_with_edges(pred_row, bin_edges, num_bins)
+        end)
+
+      all_max =
+        [Enum.max(obs_hist, fn -> 0 end) | Enum.map(pred_hists, &Enum.max(&1, fn -> 0 end))]
+        |> Enum.max()
+
+      %ExmcViz.Data.PPCData{
+        obs_name: to_string(obs_name),
+        observed_histogram: obs_hist,
+        predictive_histograms: pred_hists,
+        num_bins: num_bins,
+        bin_edges: bin_edges,
+        max_count: all_max
+      }
+    end)
+  end
+
+  defp histogram_with_edges(values, bin_edges, num_bins) do
+    Enum.map(0..(num_bins - 1), fn i ->
+      lo = Enum.at(bin_edges, i)
+      hi = Enum.at(bin_edges, i + 1)
+      Enum.count(values, fn v -> v >= lo and v < hi end)
+    end)
+  end
 end

@@ -8,7 +8,10 @@ defmodule ExmcViz.Stream.CoordinatorTest do
 
     # Send 10 samples to trigger flush
     for i <- 1..10 do
-      send(coord, {:exmc_sample, i, %{"x" => Nx.tensor(i * 1.0)}, %{divergent: false, energy: i * 1.0}})
+      send(
+        coord,
+        {:exmc_sample, i, %{"x" => Nx.tensor(i * 1.0)}, %{divergent: false, energy: i * 1.0}}
+      )
     end
 
     assert_receive {:update_data, all_samples, all_stats, 10, 20}, 1000

@@ -112,8 +112,6 @@ defmodule ExmcViz.Component.ForestPlot do
 
   defp draw_zero_line(graph, x_scale, plot_top, plot_bottom) do
     zero_px = x_scale.(0.0)
-    line(graph, {{zero_px, plot_top}, {zero_px, plot_bottom}},
-      stroke: {3, Colors.axis()}
-    )
+    line(graph, {{zero_px, plot_top}, {zero_px, plot_bottom}}, stroke: {3, Colors.axis()})
   end
 end

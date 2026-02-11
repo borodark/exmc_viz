@@ -32,8 +32,14 @@ defmodule ExmcViz.Data.EnergyData do
   @type t :: %__MODULE__{
           energies: [float()],
           transitions: [float()],
-          hist_energy: %{bins: [{float(), float(), non_neg_integer()}], max_count: non_neg_integer()},
-          hist_transition: %{bins: [{float(), float(), non_neg_integer()}], max_count: non_neg_integer()},
+          hist_energy: %{
+            bins: [{float(), float(), non_neg_integer()}],
+            max_count: non_neg_integer()
+          },
+          hist_transition: %{
+            bins: [{float(), float(), non_neg_integer()}],
+            max_count: non_neg_integer()
+          },
           max_count: non_neg_integer()
         }
 end

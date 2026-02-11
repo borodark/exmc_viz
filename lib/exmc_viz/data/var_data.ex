@@ -43,7 +43,10 @@ defmodule ExmcViz.Data.VarData do
           std: float(),
           quantiles: %{q5: float(), q25: float(), q50: float(), q75: float(), q95: float()},
           ess: float(),
-          histogram: %{bins: [{float(), float(), non_neg_integer()}], max_count: non_neg_integer()},
+          histogram: %{
+            bins: [{float(), float(), non_neg_integer()}],
+            max_count: non_neg_integer()
+          },
           acf: [float()],
           chains: [[float()]] | nil,
           rhat: float() | nil,

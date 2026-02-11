@@ -112,6 +112,59 @@ Portrait orientation, optimized for vertical 4K displays (2160 x 3840):
 
 The sampler runs at full speed in its own process. The coordinator's 10-sample buffer keeps Scenic responsive without throttling the sampler.
 
+## CFD Remote Dashboard
+
+This repo includes a Scenic Remote CFD observability dashboard. It renders into a
+native OpenGL window using the remote renderer and streams metrics over TCP.
+
+### 1) Start the renderer (GLFW)
+
+Build and run the Scenic renderer:
+
+```
+cd /home/io/projects/learn_erl/scenic_renderer_native
+mkdir -p build && cd build
+cmake ..
+make
+./examples/glfw_standalone/scenic_standalone -p 4000
+```
+
+### 2) Start the dashboard
+
+```
+cd /home/io/projects/learn_erl/pymc/exmc_viz
+iex -S mix
+ExmcViz.cfd_dashboard(host: "127.0.0.1", port: 4000, metrics_port: 4100)
+```
+
+### 3) Send metrics
+
+Metrics are expected as Erlang terms over TCP (packet: 4). Example from Elixir:
+
+```
+{:ok, sock} = :gen_tcp.connect('127.0.0.1', 4100, [:binary, packet: 4, active: false])
+:ok =
+  :gen_tcp.send(
+    sock,
+    :erlang.term_to_binary(%{
+      iteration: 1,
+      residuals: %{U: 0.8, p: 0.6},
+      halo_ms: 0.7,
+      partition_residuals: %{0 => %{U: 0.8, p: 0.6}, 1 => %{U: 0.82, p: 0.61}}
+    })
+  )
+```
+
+### Terminal dashboard
+
+For an 8-panel terminal view (24x80 each, orange on black):
+
+```
+cd /home/io/projects/learn_erl/pymc/exmc_viz
+iex -S mix
+ExmcViz.cfd_terminal()
+```
+
 ## Color Palette
 
 | Role | RGB | Use |
@@ -145,21 +198,12 @@ Scenic 0.12.0-rc.0 via local path. The `override: true` is required because scen
 
 ## License
 
-[GNU Affero General Public License v2.0](./LICENSE)
+ExmcViz is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
 
-P.S.
+You are free to use, modify, and distribute this software under AGPL terms. If you run a modified version as a network service, you must make your source code available to users of that service.
 
-```
-❯ In a latin _Documenting important things_ would be what?                                                      
-                                                           
-● Res gestae notatu dignae -- "things done worthy of noting"                                                    
-                                                           
-  Or more concisely for a section header:                                                                       
-   
-  - Notanda -- "things to be noted"                                                                             
-  - Memoranda -- "things to be remembered" (origin of the English word)
-  - Acta notabilia -- "notable proceedings"
+**Commercial licensing** is available for organizations that need to embed ExmcViz in proprietary products without AGPL obligations. Contact us for terms.
 
-  For a DECISIONS.md-style document, Memoranda fits best -- it literally means "things that must be remembered,"
-   which is exactly what architectural decision records are.
-```
+## Companion: Exmc
+
+See [`../exmc/`](../exmc/) for the probabilistic programming framework that produces the traces ExmcViz visualizes.

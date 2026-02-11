@@ -27,6 +27,11 @@ defmodule ExmcViz.Data.PairData do
           var_names: [String.t()],
           var_samples: %{String.t() => [float()]},
           correlations: %{{String.t(), String.t()} => float()},
-          histograms: %{String.t() => %{bins: [{float(), float(), non_neg_integer()}], max_count: non_neg_integer()}}
+          histograms: %{
+            String.t() => %{
+              bins: [{float(), float(), non_neg_integer()}],
+              max_count: non_neg_integer()
+            }
+          }
         }
 end

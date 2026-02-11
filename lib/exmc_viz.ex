@@ -41,7 +41,6 @@ defmodule ExmcViz do
   @default_width 2160
   @default_height 3840
 
-
   @doc """
   Show MCMC diagnostics in a native window.
 
@@ -210,6 +209,107 @@ defmodule ExmcViz do
     :ok
   end
 
+  @doc """
+  Start a live dashboard in external mode for multi-chain streaming.
+
+  Opens a Scenic window but does NOT start a sampler task. Instead, returns
+  the coordinator PID so external processes (e.g. distributed peer nodes)
+  can send `{:exmc_sample, i, point_map, step_stat}` and `{:exmc_done, total}`
+  messages directly.
+
+  ## Options
+
+  - `:width` — window width (default: 2160)
+  - `:height` — window height (default: 3840)
+  - `:title` — window title (default: "MCMC Live Sampling")
+  - `:num_samples` — total expected samples across all chains (default: 1000)
+  """
+  def stream_external(var_names, opts \\ []) do
+    width = Keyword.get(opts, :width, @default_width)
+    height = Keyword.get(opts, :height, @default_height)
+    title = Keyword.get(opts, :title, "MCMC Live Sampling")
+    num_samples = Keyword.get(opts, :num_samples, 1000)
+
+    ensure_scenic_started()
+
+    scene_opts = %{
+      ir: nil,
+      num_samples: num_samples,
+      var_names: var_names
+    }
+
+    viewport_config = [
+      name: :exmc_viz_live_viewport,
+      size: {width, height},
+      default_scene: {ExmcViz.Scene.LiveDashboard, scene_opts},
+      drivers: [driver_config(:local_live, title)]
+    ]
+
+    {:ok, _viewport} = Scenic.ViewPort.start(viewport_config)
+
+    # Poll for coordinator PID (set by LiveDashboard.init via persistent_term)
+    coordinator_pid = poll_coordinator(50, 100)
+    {:ok, coordinator_pid}
+  end
+
+  defp poll_coordinator(0, _interval), do: raise("ExmcViz coordinator did not start in time")
+
+  defp poll_coordinator(retries, interval) do
+    case :persistent_term.get(:exmc_viz_coordinator, nil) do
+      nil ->
+        Process.sleep(interval)
+        poll_coordinator(retries - 1, interval)
+
+      pid ->
+        pid
+    end
+  end
+
+  @doc """
+  Show a CFD observability dashboard over Scenic Remote.
+
+  Requires a Scenic remote renderer (native OpenGL window) to be running.
+
+  ## Options
+
+  - `:width` — viewport width (default: 1600)
+  - `:height` — viewport height (default: 900)
+  - `:title` — window title (default: "CFD Observability")
+  - `:host` — remote renderer host (default: "127.0.0.1")
+  - `:port` — remote renderer TCP port (default: 4000)
+  - `:metrics_port` — TCP port to ingest metrics (default: 4100)
+  """
+  def cfd_dashboard(opts \\ []) do
+    width = Keyword.get(opts, :width, 1600)
+    height = Keyword.get(opts, :height, 900)
+    title = Keyword.get(opts, :title, "CFD Observability")
+
+    ensure_scenic_started()
+    ensure_metrics_started(opts)
+
+    viewport_config = [
+      name: :exmc_viz_cfd_viewport,
+      size: {width, height},
+      default_scene: {ExmcViz.Scene.CfdDashboard, %{}},
+      drivers: [driver_config(:remote_cfd, title, opts)]
+    ]
+
+    {:ok, _viewport} = Scenic.ViewPort.start(viewport_config)
+
+    :ok
+  end
+
+  @doc """
+  Start the CFD terminal dashboard (orange-on-black, 8 panels).
+
+  Uses the same metrics bus as the Scenic dashboard.
+  """
+  def cfd_terminal do
+    ensure_metrics_started([])
+    ExmcViz.Cfd.Terminal.start()
+    :ok
+  end
+
   defp ensure_scenic_started do
     case Process.whereis(:scenic) do
       nil -> Scenic.start_link([])
@@ -217,14 +317,39 @@ defmodule ExmcViz do
     end
   end
 
-  defp driver_config(name, title) do
-    [
-      module: Scenic.Driver.Local,
-      name: name,
-      antialias: false,
-      window: [title: title, resizeable: false],
-      on_close: :stop_driver
-    ]
+  defp driver_config(name, title, opts \\ []) do
+    if opts[:remote] || name == :remote_cfd do
+      host = opts[:host] || "127.0.0.1"
+      port = opts[:port] || 4000
+
+      [
+        module: ScenicDriverRemote,
+        transport: ScenicDriverRemote.Transport.Tcp,
+        host: host,
+        port: port,
+        reconnect_interval: 1000
+      ]
+    else
+      [
+        module: Scenic.Driver.Local,
+        name: name,
+        antialias: false,
+        window: [title: title, resizeable: false],
+        on_close: :stop_driver
+      ]
+    end
+  end
+
+  defp ensure_metrics_started(opts) do
+    unless Process.whereis(ExmcViz.Cfd.Metrics) do
+      {:ok, _} = ExmcViz.Cfd.Metrics.start_link([])
+    end
+
+    metrics_port = opts[:metrics_port] || 4100
+
+    unless Process.whereis(ExmcViz.Cfd.MetricsSocket) do
+      {:ok, _} = ExmcViz.Cfd.MetricsSocket.start_link(port: metrics_port)
+    end
   end
 
   defp prepare_data(traces, _stats) when is_list(traces) do

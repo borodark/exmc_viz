@@ -30,7 +30,8 @@ defmodule ExmcViz.MixProject do
     [
       {:exmc, path: "../exmc"},
       {:scenic, path: "../../scenic", override: true},
-      {:scenic_driver_local, git: "https://github.com/ScenicFramework/scenic_driver_local.git"}
+      {:scenic_driver_local, git: "https://github.com/ScenicFramework/scenic_driver_local.git"},
+      {:scenic_driver_remote, path: "../../scenic_driver_remote"}
     ]
   end
 end

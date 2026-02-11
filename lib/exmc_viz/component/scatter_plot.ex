@@ -66,7 +66,9 @@ defmodule ExmcViz.Component.ScatterPlot do
     |> Enum.reduce(graph, fn {x, y, idx}, g ->
       px = x_scale.(x)
       py = y_scale.(y)
-      color = if MapSet.member?(div_set, idx), do: Colors.divergence(), else: Colors.default_line()
+
+      color =
+        if MapSet.member?(div_set, idx), do: Colors.divergence(), else: Colors.default_line()
 
       circle(g, 3,
         fill: color,

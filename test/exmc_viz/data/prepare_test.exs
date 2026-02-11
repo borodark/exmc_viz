@@ -102,12 +102,13 @@ defmodule ExmcViz.Data.PrepareTest do
       trace = %{"x" => Nx.tensor(samples)}
 
       stats = %{
-        sample_stats: [
-          %{divergent: false},
-          %{divergent: true},
-          %{divergent: false},
-          %{divergent: true}
-        ] ++ List.duplicate(%{divergent: false}, 46)
+        sample_stats:
+          [
+            %{divergent: false},
+            %{divergent: true},
+            %{divergent: false},
+            %{divergent: true}
+          ] ++ List.duplicate(%{divergent: false}, 46)
       }
 
       [vd] = Prepare.from_trace(trace, stats)

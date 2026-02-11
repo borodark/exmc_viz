@@ -15,16 +15,26 @@ defmodule ExmcViz.Draw.Colors do
 
   # Amber multi-chain palette (warm spectrum)
   @palette [
-    {255, 176, 0},     # amber
-    {255, 120, 0},     # deep orange
-    {255, 220, 80},    # gold
-    {200, 100, 0},     # burnt orange
-    {255, 150, 50},    # tangerine
-    {180, 140, 0},     # dark gold
-    {255, 200, 100},   # light amber
-    {220, 80, 0},      # rust
-    {255, 240, 150},   # pale gold
-    {160, 120, 40}     # bronze
+    # amber
+    {255, 176, 0},
+    # deep orange
+    {255, 120, 0},
+    # gold
+    {255, 220, 80},
+    # burnt orange
+    {200, 100, 0},
+    # tangerine
+    {255, 150, 50},
+    # dark gold
+    {180, 140, 0},
+    # light amber
+    {255, 200, 100},
+    # rust
+    {220, 80, 0},
+    # pale gold
+    {255, 240, 150},
+    # bronze
+    {160, 120, 40}
   ]
 
   def bg, do: @bg

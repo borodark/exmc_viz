@@ -1,16 +1,11 @@
 defmodule ExmcViz.Scene.LiveDashboard do
   @moduledoc """
-  Live-updating dashboard scene for streaming MCMC samples — portrait layout.
+  Live-updating dashboard scene for streaming MCMC samples — dynamic layout.
 
-  On init, starts a `StreamCoordinator` GenServer and a background
-  `Task` running `Exmc.NUTS.Sampler.sample_stream/4`. As samples arrive,
-  the coordinator batches them and sends `{:update_data, ...}` messages
-  to this scene, which rebuilds the full graph from the accumulated samples.
-
-  Portrait layout per variable:
-  1. Trace plot (full width)
-  2. Histogram (left 55%) + ACF (right 45%)
-  3. Summary panel (full width)
+  Fills the viewport evenly based on variable count. Priority order:
+  1. Trace plot (50%) — mixing & convergence
+  2. Histogram + ACF (30%) — posterior shape + autocorrelation
+  3. Summary panel (20%) — reference numbers
 
   Title bar shows progress: `"MCMC Live Sampling (N / total)"`.
   """
@@ -30,11 +25,9 @@ defmodule ExmcViz.Scene.LiveDashboard do
   }
 
   @title_height 60
-  @trace_h 300
-  @hist_acf_h 250
-  @summary_h 100
   @gap 8
-  @var_section_h @trace_h + @hist_acf_h + @summary_h + @gap * 2
+  @trace_frac 0.50
+  @hist_acf_frac 0.30
   @min_samples_for_display 5
 
   @impl Scenic.Scene
@@ -61,14 +54,20 @@ defmodule ExmcViz.Scene.LiveDashboard do
         num_samples: num_samples
       )
 
-    # Start sampling in a background task
-    ir = opts[:ir]
-    init_values = opts[:init_values] || %{}
-    sampler_opts = opts[:sampler_opts] || []
+    # Publish coordinator PID for external mode access
+    :persistent_term.put(:exmc_viz_coordinator, coordinator_pid)
 
-    Task.start(fn ->
-      Exmc.NUTS.Sampler.sample_stream(ir, coordinator_pid, init_values, sampler_opts)
-    end)
+    # Start sampling in a background task (skip in external mode when ir is nil)
+    ir = opts[:ir]
+
+    if ir do
+      init_values = opts[:init_values] || %{}
+      sampler_opts = opts[:sampler_opts] || []
+
+      Task.start(fn ->
+        Exmc.NUTS.Sampler.sample_stream(ir, coordinator_pid, init_values, sampler_opts)
+      end)
+    end
 
     {:ok, scene}
   end
@@ -128,7 +127,17 @@ defmodule ExmcViz.Scene.LiveDashboard do
       end)
 
     var_data_list = Prepare.from_trace(trace)
+    n_vars = length(var_data_list)
     usable_w = vw - @gap * 2
+
+    # Dynamic height allocation
+    available = vh - @title_height
+    var_gaps = n_vars * 2 * @gap
+    var_section_h = if n_vars > 0, do: round((available - var_gaps) / n_vars), else: 0
+
+    trace_h = round(var_section_h * @trace_frac)
+    hist_acf_h = round(var_section_h * @hist_acf_frac)
+    summary_h = var_section_h - trace_h - hist_acf_h - @gap * 2
 
     status = if scene.assigns.complete, do: "complete", else: "#{count} / #{total}"
     title = "MCMC Live Sampling (#{status})"
@@ -145,19 +154,19 @@ defmodule ExmcViz.Scene.LiveDashboard do
     var_data_list
     |> Enum.with_index()
     |> Enum.reduce(graph, fn {vd, i}, g ->
-      y_base = @title_height + i * @var_section_h
+      y_base = @title_height + i * (var_section_h + @gap * 2)
 
-      # Row 1: Trace plot — full width
+      # Priority 1: Trace plot — full width, biggest
       g =
         TracePlot.add_to_graph(g, vd,
           id: :"trace_#{vd.name}",
           width: usable_w,
-          height: @trace_h,
+          height: trace_h,
           translate: {@gap, y_base}
         )
 
-      # Row 2: Histogram (left 55%) + ACF (right 45%)
-      y_hist = y_base + @trace_h + @gap
+      # Priority 2: Histogram (left 55%) + ACF (right 45%)
+      y_hist = y_base + trace_h + @gap
       hist_w = round(usable_w * 0.55)
       acf_w = usable_w - hist_w - @gap
 
@@ -166,23 +175,23 @@ defmodule ExmcViz.Scene.LiveDashboard do
         |> Histogram.add_to_graph(vd,
           id: :"hist_#{vd.name}",
           width: hist_w,
-          height: @hist_acf_h,
+          height: hist_acf_h,
           translate: {@gap, y_hist}
         )
         |> AcfPlot.add_to_graph(vd,
           id: :"acf_#{vd.name}",
           width: acf_w,
-          height: @hist_acf_h,
+          height: hist_acf_h,
           translate: {@gap + hist_w + @gap, y_hist}
         )
 
-      # Row 3: Summary — full width
-      y_summary = y_hist + @hist_acf_h + @gap
+      # Priority 3: Summary — full width, least important
+      y_summary = y_hist + hist_acf_h + @gap
 
       SummaryPanel.add_to_graph(g, vd,
         id: :"summary_#{vd.name}",
         width: usable_w,
-        height: @summary_h,
+        height: summary_h,
         translate: {@gap, y_summary}
       )
     end)
