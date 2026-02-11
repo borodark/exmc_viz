@@ -103,13 +103,7 @@ defmodule ExmcViz.Cfd.Terminal do
       body_lines
       |> Enum.map(&("|" <> String.pad_trailing(" " <> &1, @panel_w - 2) <> "|"))
 
-    body =
-      body ++
-        List.duplicate(
-          "|" <> String.duplicate(" ", @panel_w - 2) <> "|",
-          @panel_h - 3 - length(body)
-        )
-
+    body = body ++ List.duplicate("|" <> String.duplicate(" ", @panel_w - 2) <> "|", @panel_h - 3 - length(body))
     [top, title_line] ++ body ++ [top]
   end
 
@@ -149,7 +143,7 @@ defmodule ExmcViz.Cfd.Terminal do
 
     vals
     |> Enum.map(fn v ->
-      idx = trunc((v - min) / range * (length(chars) - 1))
+      idx = trunc(((v - min) / range) * (length(chars) - 1))
       Enum.at(chars, idx)
     end)
     |> Enum.join()

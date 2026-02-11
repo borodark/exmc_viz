@@ -119,12 +119,7 @@ defmodule ExmcViz.Scene.CfdDashboard do
       fill: Colors.text_dim(),
       translate: {x0 + 20, y0 + 24}
     )
-    |> draw_single_series(
-      state.iterations,
-      state.halo_vals,
-      {x0, y0, w, h},
-      Colors.energy_transition()
-    )
+    |> draw_single_series(state.iterations, state.halo_vals, {x0, y0, w, h}, Colors.energy_transition())
   end
 
   defp draw_series_panel(graph, iters, u_vals, p_vals, {x0, y0, w, h}) do
@@ -218,11 +213,7 @@ defmodule ExmcViz.Scene.CfdDashboard do
       ty = y0 + 50 + row * (tile_h + gap)
 
       g
-      |> rect({tile_w, tile_h},
-        fill: Colors.bg(),
-        stroke: {2, Colors.axis()},
-        translate: {tx, ty}
-      )
+      |> rect({tile_w, tile_h}, fill: Colors.bg(), stroke: {2, Colors.axis()}, translate: {tx, ty})
       |> text("P#{part}", fill: Colors.text(), translate: {tx + 12, ty + 24})
       |> text("U: #{format_float(Map.get(res, :U))}",
         fill: Colors.text_dim(),
@@ -239,7 +230,6 @@ defmodule ExmcViz.Scene.CfdDashboard do
 
   defp range_with_pad(list, pad) do
     {min, max} = Enum.min_max(list)
-
     if min == max do
       {min - pad, max + pad}
     else

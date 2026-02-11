@@ -1,16 +1,19 @@
 # ExmcViz
 
-**Native MCMC diagnostics for Exmc.** ArviZ-style visualization rendered through Scenic on a true-black OLED palette -- trace plots, histograms, ACF, pair plots, forest plots, energy diagnostics, and live streaming that updates as the sampler runs.
+**Native diagnostics for Exmc.** ArviZ-style visualization rendered through Scenic on a true-black OLED palette — trace plots, histograms, ACF, pair plots, forest plots, energy diagnostics, and live streaming that updates as the sampler runs.
+
+**With deep respect:** the design draws directly from PyMC and ArviZ conventions. The goal is to preserve the same interpretability and statistical correctness, while changing the rendering substrate to a BEAM-native OpenGL scene graph.
 
 ![Live Streaming Dashboard](assets/live_streaming.png)
 
-## Why Native?
+## Why A Native Visualizer?
 
-Python's ArviZ renders to Matplotlib. That means a Python runtime, a GUI toolkit, and a round-trip through PNG or SVG every time you want to look at your chains. Jupyter notebooks cache these as static images -- zoom in on a suspicious region and you get pixels, not data.
+The PyMC + ArviZ stack is the reference for Bayesian diagnostics. ExmcViz keeps those semantics but renders natively:
 
-ExmcViz renders directly through Scenic's OpenGL pipeline. Every frame is a live scene graph: resize the window, the plots re-render at native resolution. The same rendering path drives static dashboards, interactive pair plots, and real-time streaming from an active sampler -- no file I/O, no image encoding, no external processes.
-
-The amber-on-black palette is not decorative. True black (`{0,0,0}`) means zero power on OLED panels. The warm spectrum -- amber, gold, burnt orange -- preserves night-adapted vision during long sampling sessions and provides enough hue variation for ten chains without reaching for blue or green.
+- No PNG/SVG round-trips. Every frame is a live scene graph.
+- Streaming updates during sampling, not after.
+- Resolution-independent rendering that stays sharp on resize and zoom.
+- A live posterior state updated online as samples arrive.
 
 ## Visualization Types
 
@@ -77,27 +80,6 @@ ExmcViz.show(trace, stats)
 
 All Nx tensor computation happens in `Data.Prepare`. Components receive plain Elixir lists and floats. This boundary means Scenic never touches Nx, and Nx never touches the scene graph.
 
-## Dashboard Layout
-
-Portrait orientation, optimized for vertical 4K displays (2160 x 3840):
-
-```
-┌─────────────────────────┐
-│  MCMC Trace Diagnostics │  title
-├─────────────────────────┤
-│  ▬▬▬▬▬▬▬▬ trace ▬▬▬▬▬▬ │  full width, 300px
-├──────────────┬──────────┤
-│  histogram   │   ACF    │  55% / 45%, 250px
-├──────────────┴──────────┤
-│  mean  std  q5 ... ESS  │  summary, 100px
-├─────────────────────────┤
-│  ▬▬▬▬▬▬▬▬ trace ▬▬▬▬▬▬ │  next variable...
-│  ...                    │
-├─────────────────────────┤
-│  Energy (marginal+trans)│  energy row, 300px
-└─────────────────────────┘
-```
-
 ## Live Streaming
 
 `ExmcViz.stream/3` connects the sampler directly to the visualization:
@@ -110,60 +92,17 @@ Portrait orientation, optimized for vertical 4K displays (2160 x 3840):
 6. Scene rebuilds the full graph with updated data
 7. Title bar shows progress: `"MCMC Live Sampling (150 / 500)"`
 
-The sampler runs at full speed in its own process. The coordinator's 10-sample buffer keeps Scenic responsive without throttling the sampler.
+The sampler runs at full speed in its own process. The coordinator’s 10-sample buffer keeps Scenic responsive without throttling the sampler.
 
-## CFD Remote Dashboard
+## Suggested Screenshots (Placeholders)
 
-This repo includes a Scenic Remote CFD observability dashboard. It renders into a
-native OpenGL window using the remote renderer and streams metrics over TCP.
+Add these images once captured:
 
-### 1) Start the renderer (GLFW)
-
-Build and run the Scenic renderer:
-
-```
-cd /home/io/projects/learn_erl/scenic_renderer_native
-mkdir -p build && cd build
-cmake ..
-make
-./examples/glfw_standalone/scenic_standalone -p 4000
-```
-
-### 2) Start the dashboard
-
-```
-cd /home/io/projects/learn_erl/pymc/exmc_viz
-iex -S mix
-ExmcViz.cfd_dashboard(host: "127.0.0.1", port: 4000, metrics_port: 4100)
-```
-
-### 3) Send metrics
-
-Metrics are expected as Erlang terms over TCP (packet: 4). Example from Elixir:
-
-```
-{:ok, sock} = :gen_tcp.connect('127.0.0.1', 4100, [:binary, packet: 4, active: false])
-:ok =
-  :gen_tcp.send(
-    sock,
-    :erlang.term_to_binary(%{
-      iteration: 1,
-      residuals: %{U: 0.8, p: 0.6},
-      halo_ms: 0.7,
-      partition_residuals: %{0 => %{U: 0.8, p: 0.6}, 1 => %{U: 0.82, p: 0.61}}
-    })
-  )
-```
-
-### Terminal dashboard
-
-For an 8-panel terminal view (24x80 each, orange on black):
-
-```
-cd /home/io/projects/learn_erl/pymc/exmc_viz
-iex -S mix
-ExmcViz.cfd_terminal()
-```
+- `assets/live_streaming.png` — live dashboard during sampling.
+- `assets/pair_plot_4k.png` — pair plot with correlations.
+- `assets/forest_plot.png` — forest plot for a multi-variable model.
+- `assets/energy_plot.png` — energy marginal + transition overlay.
+- `assets/dashboard_4k.png` — full dashboard layout at portrait 4K.
 
 ## Color Palette
 
@@ -178,8 +117,6 @@ ExmcViz.cfd_terminal()
 | Forest mean | `{255, 255, 255}` | White dot |
 | Text | `{255, 200, 120}` | Labels, titles |
 
-Ten chain colors cycle through the warm spectrum: amber, deep orange, gold, burnt orange, tangerine, dark gold, light amber, rust, pale gold, bronze.
-
 ## Dependencies
 
 ```elixir
@@ -188,22 +125,20 @@ Ten chain colors cycle through the warm spectrum: amber, deep orange, gold, burn
 {:scenic_driver_local, git: "https://github.com/ScenicFramework/scenic_driver_local.git"}
 ```
 
-Scenic 0.12.0-rc.0 via local path. The `override: true` is required because scenic_driver_local declares `scenic ~> 0.12` and the local path dep needs to satisfy it.
-
 ## Test Suite
 
-34 tests covering data preparation (histograms, ACF, ESS, HDI, correlations, energy), linear scaling, and multi-chain merge logic. All visualization is tested through the `Data.Prepare` layer -- components are pure Scenic graph builders with no state to test.
+34 tests covering data preparation (histograms, ACF, ESS, HDI, correlations, energy), linear scaling, and multi-chain merge logic. All visualization is tested through the `Data.Prepare` layer — components are pure Scenic graph builders with no state to test.
 
 ![Pair Plot](assets/pair_plot_4k.png)
 
 ## License
 
-ExmcViz is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+ExmcViz is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
 You are free to use, modify, and distribute this software under AGPL terms. If you run a modified version as a network service, you must make your source code available to users of that service.
 
-**Commercial licensing** is available for organizations that need to embed ExmcViz in proprietary products without AGPL obligations. Contact us for terms.
+Commercial licensing is available for organizations that need to embed ExmcViz in proprietary products without AGPL obligations. Contact us for terms.
 
 ## Companion: Exmc
 
-See [`../exmc/`](../exmc/) for the probabilistic programming framework that produces the traces ExmcViz visualizes.
+See `exmc/` for the probabilistic programming framework that produces the traces ExmcViz visualizes.
