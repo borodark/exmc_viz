@@ -28,10 +28,10 @@ defmodule ExmcViz.MixProject do
 
   defp deps do
     [
-      {:exmc, path: "../exmc"},
-      {:scenic, path: "../../scenic", override: true},
-      {:scenic_driver_local, git: "https://github.com/ScenicFramework/scenic_driver_local.git"},
-      {:scenic_driver_remote, path: "../../scenic_driver_remote"}
+      {:exmc, git: "https://github.com/borodark/exmc.git", tag: "β"},
+      {:scenic, git: "https://github.com/ScenicFramework/scenic.git", tag: "v0.11.1", override: true},
+      {:scenic_driver_local, git: "https://github.com/ScenicFramework/scenic_driver_local.git", tag: "v0.11.0"},
+      {:nimble_options, "~> 0.3.4 or ~> 0.4.0 or ~> 0.5.0 or ~> 1.1"}
     ]
   end
 end
